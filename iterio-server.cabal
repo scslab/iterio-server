@@ -11,6 +11,9 @@ Synopsis:       Library for building servers with IterIO
 Category:       Network, Enumerator
 Cabal-Version:  >= 1.6
 
+Extra-source-files:
+  Examples/BasicSite.hs
+
 Description:
   This module contains a set of generic building blocks for building servers with IterIO.
 
@@ -23,10 +26,15 @@ Library
                  bytestring >= 0.9 && < 1,
                  ListLike >= 3 && < 4,
                  monadIO >= 0.10 && < 0.20,
+                 mtl >= 2.0 && < 2.1,
                  iterIO >= 0.2 && < 0.3,
-                 network >= 2.3 && < 2.4
+                 network >= 2.3 && < 2.4,
+                 split >= 0.1 && < 0.2,
+                 transformers >= 0.2 && < 0.3
 
   ghc-options: -Wall
 
   Exposed-modules:
     Data.IterIO.Server.TCPServer
+    Data.IterIO.Http.Support.Action
+    Data.IterIO.Http.Support.Responses

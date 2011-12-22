@@ -36,7 +36,7 @@ routeAction action = routeFn $ runAction action
 routeActionPattern :: Monad m => String -> Action t m () -> HttpRoute m t
 routeActionPattern pattern action = foldl' addVar (routeFn $ runActionWithRouteNames patternList action) patternList
   where patternList = reverse $ filter ((/= 0) . length) $ splitOn "/" pattern
-        addVar rt (':':v) = routeVar rt
+        addVar rt (':':_) = routeVar rt
         addVar rt name = routeName name rt
 
 setSession :: Monad m => String -> Action t m ()
@@ -64,7 +64,7 @@ param :: Monad m => S.ByteString -> Action t m (Maybe Param)
 param key = do
   prms <- params
   return $ foldl go Nothing prms
-  where go Nothing p = Just p
+  where go Nothing p = if paramKey p == key then Just p else Nothing
         go a _ = a
 
 
@@ -80,9 +80,9 @@ runActionWithRouteNames :: Monad m
               -> HttpReq s
               -> Iter L.ByteString m (HttpResp m)
 runActionWithRouteNames routeNames action req = do
-  params <- paramList req
+  prms <- paramList req
   let pathLstParams = pathLstToParams req routeNames
-  (_, (_, response, _)) <- lift $ (runStateT action) (req, mkHttpHead stat200, pathLstParams ++ params)
+  (_, (_, response, _)) <- lift $ (runStateT action) (req, mkHttpHead stat200, pathLstParams ++ prms)
   return $ response
 
 

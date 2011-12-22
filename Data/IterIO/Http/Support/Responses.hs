@@ -11,7 +11,6 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import Data.IterIO
 import Data.IterIO.Http.Support.Action (Action)
 import Data.IterIO.Http
-import Data.IterIO.HttpRoute
 
 respond404 :: Monad m => Action t m ()
 respond404 = StateT $
