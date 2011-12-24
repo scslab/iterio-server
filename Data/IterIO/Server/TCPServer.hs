@@ -2,7 +2,8 @@
 module Data.IterIO.Server.TCPServer (
   TCPServer(..),
   runTCPServer,
-  defaultSocketAcceptor,
+  defaultServerAcceptor,
+  minimalTCPServer,
   simpleHttpServer,
   echoServer
 ) where
@@ -33,54 +34,69 @@ data TCPServer inp m = TCPServer {
 -- |This 'Inum' implements the actual functionality of the server. The input
 --  and output of the 'Inum' correspond to the input and output of the socket.
   , serverHandler :: Inum inp inp m ()
--- |A function to accept incomming connections. Most servers should just use
--- 'defaultSocketAcceptor' but this can be used for special cases, e.g.
--- accepting SSL connections with 'Data.IterIO.SSL.iterSSL'.
-  , socketAcceptor :: Net.Socket -> m (Iter inp m (), Onum inp m ())
+-- |A function to transform an accept incomming connection into an iter and onum.
+--  Most servers should just use 'defaultSocketAcceptor' but this can be used for
+--  special cases, e.g. accepting SSL connections with 'Data.IterIO.SSL.iterSSL'.
+  , serverAcceptor :: Net.Socket -> m (Iter inp m (), Onum inp m ())
+-- |Must execute the monadic result. Servers operating in the 'IO' Monad can
+--  use 'id'.
+  , serverResultHandler :: m () -> IO ()
 }
 
 instance Show (TCPServer inp m) where
   show s = "TCPServer { serverPort: " ++ (show $ serverPort s) ++ " }"
 
--- |This socket-acceptor simply accepts a connection from the socket and
---  creates an 'Iter' and 'Onum' using 'handleI' and 'enumHandle',
---  respectively.
-defaultSocketAcceptor ::  (ListLikeIO inp e,
-                           ChunkData inp, HasFork m)
+-- |For convenience, a TCPServer in the 'IO' Monad with null defaults:
+--
+--    * Port 0 (next availabel port)
+--
+--    * Handler set to 'inumNop'
+--
+--    * Acceptor set to 'defaultServerAcceptor'
+--
+--    * Request handler set to 'id' (noop)
+--
+minimalTCPServer :: (ListLikeIO inp e, ChunkData inp) => TCPServer inp IO
+minimalTCPServer = TCPServer 0 inumNop defaultServerAcceptor id
+
+-- |This acceptor creates an 'Iter' and 'Onum' using 'handleI' and
+--  'enumHandle' respectively.
+defaultServerAcceptor ::  (ListLikeIO inp e,
+                           ChunkData inp, MonadIO m)
                       => Net.Socket -> m (Iter inp m (), Onum inp m a)
-defaultSocketAcceptor sock = liftIO $ do
-  (s, _) <- Net.accept sock
-  h <- Net.socketToHandle s ReadWriteMode
+defaultServerAcceptor sock = liftIO $ do
+  h <- Net.socketToHandle sock ReadWriteMode
   hSetBuffering h NoBuffering
   return (handleI h, enumHandle h)
 
 -- |Runs a 'TCPServer' in a loop.
 runTCPServer :: (ListLikeIO inp e,
-                 ChunkData inp, HasFork m)
+                 ChunkData inp, Monad m)
               => TCPServer inp m
-              -> m ()
+              -> IO ()
 runTCPServer server = do
-  sock <- liftIO $ sockListenTCP $ serverPort server
+  sock <- sockListenTCP $ serverPort server
+  let handler = serverResultHandler server
   forever $ do
-    (iter, enum) <- (socketAcceptor server) sock
-    _ <- fork $ do
+    (s, _) <- Net.accept sock
+    _ <- forkIO $ handler $ do
+      (iter, enum) <- (serverAcceptor server) s
       enum |$ serverHandler server .| iter
     return ()
 
 -- |Creates a simple HTTP server from an 'HTTPRequestHandler'.
-simpleHttpServer :: (HasFork m)
-                =>  Net.PortNumber
-                ->  HttpRequestHandler m ()
-                -> TCPServer L.ByteString m
-simpleHttpServer port reqHandler = TCPServer port httpAppHandler defaultSocketAcceptor
+simpleHttpServer :: Net.PortNumber
+                 -> HttpRequestHandler IO ()
+                 -> TCPServer L.ByteString IO
+simpleHttpServer port reqHandler = minimalTCPServer { serverPort = port, serverHandler = httpAppHandler }
   where httpAppHandler = mkInumM $ do
           req <- httpReqI
           resp <- liftI $ reqHandler req
           irun $ enumHttpResp resp Nothing
 
 -- |Creates a 'TCPServer' that echoes each line from the client until EOF.
-echoServer :: (HasFork m) => Net.PortNumber -> TCPServer String m
-echoServer port = TCPServer port echoAppHandler defaultSocketAcceptor
+echoServer :: Net.PortNumber -> TCPServer String IO
+echoServer port = minimalTCPServer { serverPort = port, serverHandler = echoAppHandler }
   where echoAppHandler = mkInumM $ forever $ do
           input <- safeLineI
           case input of
