@@ -11,7 +11,6 @@ module Data.IterIO.Http.Support.Action (
   , requestHeader
 ) where
 
-import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.State
 import qualified Data.ByteString.Char8 as S
