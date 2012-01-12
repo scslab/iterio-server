@@ -38,4 +38,6 @@ Library
     Data.IterIO.Http.Support.Action
     Data.IterIO.Http.Support.Responses
     Data.IterIO.Http.Support.RestController
+    Data.IterIO.Http.Support.Routing
     Data.IterIO.Server.TCPServer
+
