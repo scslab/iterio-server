@@ -35,6 +35,7 @@ Library
   ghc-options: -Wall
 
   Exposed-modules:
+    Data.IterIO.Http.Support
     Data.IterIO.Http.Support.Action
     Data.IterIO.Http.Support.Responses
     Data.IterIO.Http.Support.RestController

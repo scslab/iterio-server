@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, MultiParamTypeClasses #-}
 -- | This module defines the 'RestController' class
  
 module Data.IterIO.Http.Support.RestController (
@@ -15,29 +15,29 @@ import Data.Monoid
 
 -- |The class @RestController@ allows a set of actions to be routed using
 -- RESTful HTTP verbs.
-class RestController a where
+class Monad m => RestController m a where
   -- |GET \/
-  restIndex :: Monad m => a -> Action t m ()
+  restIndex :: a -> Action t m ()
   restIndex _ = respond404
 
   -- |GET \/:id
   --
   -- @id@ is passed in as the second parameter.
-  restShow :: Monad m => a -> L.ByteString -> Action t m ()
+  restShow :: a -> L.ByteString -> Action t m ()
   restShow _ _ = respond404
 
   -- |GET \/new
-  restNew :: Monad m => a -> Action t m ()
+  restNew :: a -> Action t m ()
   restNew _ = respond404
 
   -- |POST \/
-  restCreate :: Monad m => a -> Action t m ()
+  restCreate :: a -> Action t m ()
   restCreate _ = respond404
 
   -- |GET \/:id\/edit
   --
   -- @id@ is passed in as the second parameter.
-  restEdit :: Monad m => a -> L.ByteString -> Action t m ()
+  restEdit :: a -> L.ByteString -> Action t m ()
   restEdit _ _ = respond404
 
   -- |PUT \/:id
@@ -47,7 +47,7 @@ class RestController a where
   -- Since @PUT@ is not supported by many browsers, this action also responds to
   -- requests containing the HTTP header "X-HTTP-Method-Override: PUT"
   -- regardless of the actual HTTP method (@GET@ or @POST@)
-  restUpdate :: Monad m => a -> L.ByteString -> Action t m ()
+  restUpdate :: a -> L.ByteString -> Action t m ()
   restUpdate _ _ = respond404
 
   -- |DELETE \/:id
@@ -57,7 +57,7 @@ class RestController a where
   -- Since @DELETE@ is not supported by many browsers, this action also responds to
   -- requests containing the HTTP header "X-HTTP-Method-Override: DELETE"
   -- regardless of the actual HTTP method (@GET@ or @POST@)
-  restDestroy :: Monad m => a -> L.ByteString -> Action t m ()
+  restDestroy :: a -> L.ByteString -> Action t m ()
   restDestroy _ _ = respond404
 
 -- |Runs an action, passing in named parameter.
@@ -89,7 +89,7 @@ runWithVar varName controller = do
 --
 --    * PUT \/posts\/:id => myRestController#restUpdate
 --
-routeRestController :: (Monad m, RestController a) => String -> a -> HttpRoute m t
+routeRestController :: RestController m a => String -> a -> HttpRoute m t
 routeRestController prefix controller = routeName prefix $ mconcat [
     routeTop $ routeMethod "GET" $ routeAction $ restIndex controller
   , routeTop $ routeMethod "POST" $ routeAction $ restCreate controller

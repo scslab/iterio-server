@@ -47,7 +47,7 @@ welcomeAction = do
 
 indexAction :: Action t IO ()
 indexAction = do
-  idx <- liftIO $ getStdRandom (randomR (0,length quotes - 1)) 
+  idx <- lift $ getStdRandom (randomR (0,length quotes - 1)) 
   let quote = quotes !! idx
   render "text/html" $ renderHtml $ docTypeHtml $ do
     body $ do
