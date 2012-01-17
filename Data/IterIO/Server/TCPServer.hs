@@ -89,10 +89,7 @@ simpleHttpServer :: Net.PortNumber
                  -> HttpRequestHandler IO ()
                  -> TCPServer L.ByteString IO
 simpleHttpServer port reqHandler = minimalTCPServer { serverPort = port, serverHandler = httpAppHandler }
-  where httpAppHandler = mkInumM $ do
-          req <- httpReqI
-          resp <- liftI $ reqHandler req
-          irun $ enumHttpResp resp Nothing
+  where httpAppHandler = inumHttpServer $ ioHttpServer reqHandler
 
 -- |Creates a 'TCPServer' that echoes each line from the client until EOF.
 echoServer :: Net.PortNumber -> TCPServer String IO
