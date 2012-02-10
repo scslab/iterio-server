@@ -1,3 +1,7 @@
+{-# LANGUAGE CPP #-}
+#if defined(__GLASGOW_HASKELL__) && (__GLASGOW_HASKELL__ >= 702)
+{-# LANGUAGE Safe #-}
+#endif
 {-# LANGUAGE OverloadedStrings, MultiParamTypeClasses #-}
 -- | This module defines the 'RestController' class
  

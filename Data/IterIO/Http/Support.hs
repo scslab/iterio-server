@@ -1,3 +1,7 @@
+{-# LANGUAGE CPP #-}
+#if defined(__GLASGOW_HASKELL__) && (__GLASGOW_HASKELL__ >= 702)
+{-# LANGUAGE Safe #-}
+#endif
 module Data.IterIO.Http.Support ( module Data.IterIO.Http.Support.Action
                                 , module Data.IterIO.Http.Support.Responses
                                 , module Data.IterIO.Http.Support.RestController

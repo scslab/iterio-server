@@ -1,3 +1,7 @@
+{-# LANGUAGE CPP #-}
+#if defined(__GLASGOW_HASKELL__) && (__GLASGOW_HASKELL__ >= 702)
+{-# LANGUAGE Safe #-}
+#endif
 -- |Utility functions for responding to HTTP requests from within an 'Action'.
 module Data.IterIO.Http.Support.Responses (
     render

@@ -1,3 +1,7 @@
+{-# LANGUAGE CPP #-}
+#if defined(__GLASGOW_HASKELL__) && (__GLASGOW_HASKELL__ >= 702)
+{-# LANGUAGE Safe #-}
+#endif
 -- |Defines the 'Action' monad which abstracts some of the details of handling
 -- HTTP requests with IterIO.
 module Data.IterIO.Http.Support.Action (
