@@ -58,8 +58,9 @@ indexAction = do
 
 quoteAction :: Action t IO ()
 quoteAction = do
-  (Just idx) <- param "index" 
-  let quote = quotes !! (read $ (L.unpack . paramValue) idx)
+  (Just idx') <- param "index" 
+  let idx   = read $ (L.unpack . paramValue) idx'
+      quote = quotes !! (Prelude.max 0 (Prelude.min idx (length quotes -1)))
   render "text/html" $ renderHtml $ docTypeHtml $ do
     body $ do
       h1 $ do "Johnny Carson "; toHtml quote
