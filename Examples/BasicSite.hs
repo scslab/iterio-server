@@ -5,11 +5,12 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import Data.IterIO.HttpRoute
 import Data.IterIO.Server.TCPServer
 import Data.Monoid
+import Data.Maybe
 import System.Random
 
 import Text.Blaze.Renderer.Utf8 (renderHtml)
 import Text.Blaze.Html5 hiding (param)
-import Text.Blaze.Html5.Attributes
+import Text.Blaze.Html5.Attributes hiding (id, min, max)
 
 import Data.IterIO.Http.Support.Action
 import Data.IterIO.Http.Support.Responses
@@ -59,9 +60,10 @@ indexAction = do
 quoteAction :: Action t IO ()
 quoteAction = do
   (Just idx') <- param "index" 
-  let idx   = read $ (L.unpack . paramValue) idx'
-      quote = quotes !! (Prelude.max 0 (Prelude.min idx (length quotes -1)))
+  let idx   = maybe 0 id $ maybeRead $ (L.unpack . paramValue) idx'
+      quote = quotes !! (max 0 (min idx (length quotes -1)))
   render "text/html" $ renderHtml $ docTypeHtml $ do
     body $ do
       h1 $ do "Johnny Carson "; toHtml quote
       p $ a ! href "/factoid" $ "Another random quote..."
+    where maybeRead = fmap fst . listToMaybe . reads
