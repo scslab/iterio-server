@@ -28,11 +28,12 @@ instance RestController IO PostsController where
     render "text/html" $ layout $ postsIndex posts
 
   restShow _ pid = do
-    post <- lift $ findPost $ read . L.unpack $ pid
+    post <- lift $ findPost $ read . L.unpack $ pid --NOTES: read can fail
     render "text/html" $ layout $ postsShow post
 
   restNew _ = render "text/html" $ layout postsNew
 
   restCreate _ = do
-    post <- fmap newPost params
-    render "text/html" $ L.pack $ show post
+    ps <- params
+    post <- lift $ newPost ps
+    redirectTo "/"

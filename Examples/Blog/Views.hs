@@ -10,10 +10,8 @@ import Post
 
 truncateStr :: Int -> String -> String
 truncateStr len str =
-  if length str > len then
-    take len str ++ "..."
-    else
-      str
+  take len str ++
+    if length str > len then "..." else "" 
 
 layout content = renderHtml $ docTypeHtml $ do
   head $ do
@@ -60,8 +58,5 @@ postsForm post = form ! action target ! method "POST" $ do
     br
     textarea ! id "post_title" ! name "body" $ toHtml $ postBody post
   input ! type_ "submit" ! value "Submit"
-  where target = toValue $
-          case postId post of
-            Just pid -> "/posts/" ++ (show pid)
-            Nothing -> "/posts/"
+  where target = toValue $ "/posts/" ++ (maybe "" show $ postId post)
 
