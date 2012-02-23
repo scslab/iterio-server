@@ -28,7 +28,7 @@ instance RestController IO PostsController where
     render "text/html" $ layout $ postsIndex posts
 
   restShow _ pid = do
-    post <- lift $ findPost $ read . L.unpack $ pid --NOTES: read can fail
+    post <- lift $ findPost $ read . L.unpack $ pid
     render "text/html" $ layout $ postsShow post
 
   restNew _ = render "text/html" $ layout postsNew

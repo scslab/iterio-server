@@ -27,8 +27,8 @@ newPost prms = let post = Post Nothing (L.unpack title) (L.unpack body)
         lookup' key (p:ps)
           | key == paramKey p = Just p
           | otherwise = lookup' key ps
-        title = paramValue $ fromJust $ lookup' "title" prms -- NOTES: fromJust can fail
-        body = paramValue $ fromJust $ lookup' "body" prms   --  "" 
+        title = paramValue $ fromJust $ lookup' "title" prms
+        body = paramValue $ fromJust $ lookup' "body" prms
 
 insertPost :: Post -> IO ()
 insertPost post = do
