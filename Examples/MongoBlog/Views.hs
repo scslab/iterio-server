@@ -29,7 +29,7 @@ postsIndex posts = do
   mapM_ (\post -> do
     article $ do
       h2 $ do
-        let pid = postId post
+        let pid = unSObjId $ postId post
         a ! href (toValue $ "/posts/" ++ (show $ pid)) $
           toHtml $ postTitle post
       p $ toHtml $ truncateStr 500 $ postBody post
@@ -37,7 +37,7 @@ postsIndex posts = do
 
 postsShow post = article $ do
   h2 $ do
-    let pid = postId post
+    let pid = unSObjId $ postId post
     a ! href (toValue $ "/posts/" ++ (show $ pid)) $
       toHtml $ postTitle post
   p $ toHtml $ postBody post
@@ -62,5 +62,5 @@ postsForm post = form ! action target ! method "POST" $ do
     where pid = postId post
           target = toValue $ "/posts/" ++ (if pid == noSObjId
                                              then ""
-                                             else show pid)
+                                             else show $ unSObjId pid)
 

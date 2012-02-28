@@ -20,9 +20,8 @@ data Post = Post { postId :: Maybe Integer
 emptyPost :: Post
 emptyPost = Post Nothing "" ""
 
-newPost :: [Param] -> IO Post
-newPost prms = let post = Post Nothing (L.unpack title) (L.unpack body)
-               in insertPost post >> return post
+newPost :: [Param] -> Post
+newPost prms = Post Nothing (L.unpack title) (L.unpack body)
   where lookup' key [] = Nothing
         lookup' key (p:ps)
           | key == paramKey p = Just p

@@ -35,5 +35,5 @@ instance RestController IO PostsController where
 
   restCreate _ = do
     ps <- params
-    post <- lift $ newPost ps
-    render "text/html" $ layout $ postsShow post
+    postId <- lift $ insertPost $ newPost ps
+    redirectTo $ "/posts/" ++ show postId

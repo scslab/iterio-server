@@ -39,12 +39,10 @@ $(deriveStructured ''Post)
 emptyPost :: Post
 emptyPost = Post noSObjId "" ""
 
-newPost :: [Param] -> IO Post
+newPost :: [Param] -> Post
 newPost prms = do
-  let post = emptyPost { postTitle =  (L.unpack title)
-                       , postBody  = (L.unpack body) }
-  oID <- insertPost post
-  return $ post { postId = oID }
+  emptyPost { postTitle =  (L.unpack title)
+            , postBody  = (L.unpack body) }
     where lookup' key [] = Nothing
           lookup' key (p:ps)
             | key == paramKey p = Just p
@@ -52,8 +50,8 @@ newPost prms = do
           title = paramValue $ fromJust $ lookup' "title" prms
           body = paramValue $ fromJust $ lookup' "body" prms
 
-insertPost :: Post -> IO SObjId
-insertPost post = withDB $ liftM (fromJust . cast') $ insert post
+insertPost :: Post -> IO ObjectId
+insertPost post = withDB $ liftM (unSObjId . fromJust . cast') $ insert post
 
 findPosts :: IO [Post]
 findPosts = withDB $  do
@@ -61,7 +59,7 @@ findPosts = withDB $  do
   c <- find query
   liftM catMaybes $ rest c
 
-findPost :: SObjId -> IO Post
+findPost :: ObjectId -> IO Post
 findPost pid = withDB $ do
-  let query = select (PostId .== pid)
+  let query = select (PostId .== (toSObjId pid))
   fetch query
