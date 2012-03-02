@@ -43,7 +43,7 @@ render :: Monad m
        -> L.ByteString -- ^ The response body
        -> Action t m ()
 render ctype text = StateT $ \(req, resp, prm) -> return $ ((), (req, mkResp resp, prm))
-  where len = S.pack $ "Content-Length: " ++ show (L.length text)
-        ctypeHeader = S.pack $ "Content-Type: " ++ ctype
-        mkResp resp = resp { respHeaders = respHeaders resp ++ [ctypeHeader, len],
-                        respBody = inumPure text }
+  where len = (S.pack "Content-Length", S.pack . show . L.length $ text)
+        ctypeHeader = (S.pack "Content-Type", S.pack ctype)
+        mkResp resp = resp { respHeaders = ctypeHeader : (len : respHeaders resp)
+                           , respBody = inumPure text }

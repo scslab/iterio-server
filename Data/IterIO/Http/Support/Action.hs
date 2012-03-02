@@ -62,14 +62,14 @@ routeActionPattern pattern action = foldl' addVar (routeFn $ runActionWithRouteN
 -- |Sets a the value for \"_sess\" in the cookie to the given string.
 setSession :: Monad m => String -> Action t m ()
 setSession cookie = StateT $ \(req, resp, prm) ->
-  let cookieHeader = S.pack $ "Set-Cookie: _sess=" ++ cookie ++ "; path=/;"
-  in return $ ((), (req, resp { respHeaders = cookieHeader:(respHeaders resp)}, prm))
+  let cookieHeader = (S.pack "Set-Cookie", S.pack $ "_sess=" ++ cookie ++ "; path=/;")
+  in return $ ((), (req, respAddHeader cookieHeader resp , prm))
 
 -- |Removes the \"_sess\" key-value pair from the cookie.
 destroySession :: Monad m => Action t m ()
 destroySession = StateT $ \(req, resp, prm) ->
-  let cookieHeader = S.pack $ "Set-Cookie: _sess=; path=/; expires=Thu, Jan 01 1970 00:00:00 UTC;"
-  in return $ ((), (req, resp { respHeaders = cookieHeader:(respHeaders resp)}, prm))
+  let cookieHeader = (S.pack "Set-Cookie", S.pack "_sess=; path=/; expires=Thu, Jan 01 1970 00:00:00 UTC;")
+  in return $ ((), (req, respAddHeader cookieHeader resp, prm))
 
 -- |Returns the value of an Http Header from the request if it exists otherwise
 -- 'Nothing'
