@@ -7,6 +7,7 @@ import Text.Blaze.Html5 hiding (param)
 import Text.Blaze.Html5.Attributes hiding (form, label)
 
 import Post
+import Database.MongoDB.Structured
 
 truncateStr :: Int -> String -> String
 truncateStr len str =
@@ -28,7 +29,7 @@ postsIndex posts = do
   mapM_ (\post -> do
     article $ do
       h2 $ do
-        let (Just pid) = postId post
+        let pid = unSObjId $ postId post
         a ! href (toValue $ "/posts/" ++ (show $ pid)) $
           toHtml $ postTitle post
       p $ toHtml $ truncateStr 500 $ postBody post
@@ -36,7 +37,7 @@ postsIndex posts = do
 
 postsShow post = article $ do
   h2 $ do
-    let (Just pid) = postId post
+    let pid = unSObjId $ postId post
     a ! href (toValue $ "/posts/" ++ (show $ pid)) $
       toHtml $ postTitle post
   p $ toHtml $ postBody post
@@ -58,5 +59,8 @@ postsForm post = form ! action target ! method "POST" $ do
     br
     textarea ! id "post_title" ! name "body" $ toHtml $ postBody post
   input ! type_ "submit" ! value "Submit"
-  where target = toValue $ "/posts/" ++ (maybe "" show $ postId post)
+    where pid = postId post
+          target = toValue $ "/posts/" ++ (if pid == noSObjId
+                                             then ""
+                                             else show $ unSObjId pid)
 

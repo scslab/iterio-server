@@ -1,5 +1,5 @@
 Name:           iterio-server
-Version:        0.2
+Version:        0.3
 build-type:     Simple
 License:        BSD3
 License-File:   LICENSE
@@ -27,7 +27,7 @@ Library
                  ListLike >= 3 && < 4,
                  monadIO >= 0.10 && < 0.20,
                  mtl >= 2.0 && < 2.1,
-                 iterIO >= 0.2 && < 0.3,
+                 iterIO >= 0.2.2 && < 0.3,
                  network >= 2.3 && < 2.4,
                  split >= 0.1 && < 0.2,
                  transformers >= 0.2 && < 0.3
