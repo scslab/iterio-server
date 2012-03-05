@@ -29,6 +29,14 @@ newPost prms = Post Nothing (L.unpack title) (L.unpack body)
         title = paramValue $ fromJust $ lookup' "title" prms
         body = paramValue $ fromJust $ lookup' "body" prms
 
+insertPost :: Post -> IO ()
+insertPost post = do
+  conn <- db
+  stmt <- query conn $ "insert into posts (title, body) values('" 
+                                      ++ postTitle post  ++ "','"
+                                      ++ postBody post   ++ "')"
+  closeStatement stmt
+
 toPost :: Statement -> IO Post
 toPost stmt = do
   pid <- getFieldValue stmt "id"
@@ -48,4 +56,5 @@ findPost pid = do
   stmt <- query conn $ "select * from posts where id = " ++ (show pid)
   fetch stmt
   toPost stmt
+
 

@@ -1,0 +1,25 @@
+body {
+  width: 900px;
+  margin: 0 auto;
+  font: .9em 'Helvetica Neue', Helvetica, 'Lucida Grande', 'Lucida Sans Unicode', sans-serif;
+  color: #424037;
+}
+
+h1, h2 {
+  font-weight: bold;
+}
+
+h1 a, h2 a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+h1 {
+  border-bottom: 1px solid #ccc;
+  font-size: 3em;
+}
+
+article {
+  padding-left: 1em;
+  width: 400px;
+}
