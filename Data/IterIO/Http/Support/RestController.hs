@@ -102,5 +102,6 @@ routeRestController prefix controller = routeName prefix $ mconcat [
   , routeMethod "GET" $ routeActionPattern "/:id" $ runWithVar "id" $ restShow controller
   , routeMethod "DELETE" $ routeActionPattern "/:id" $ runWithVar "id" $ restDestroy controller
   , routeMethod "PUT" $ routeActionPattern "/:id" $ runWithVar "id" $ restUpdate controller
+  , routeMethod "POST" $ routeActionPattern "/:id" $ runWithVar "id" $ restUpdate controller
   ]
 
