@@ -6,17 +6,16 @@
 -- HTTP requests with IterIO.
 module Data.IterIO.Http.Support.Action (
     Action
+  , ActionState(..)
   , Param(..)
-  , routeAction
-  , routeActionPattern
-  , params
-  , param
+  , routeAction, routeActionPattern
+  , params, param, paramVal, paramValM
   , getHttpReq
-  , setSession
-  , destroySession
+  , setSession, destroySession
   , requestHeader
 ) where
 
+import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.State
 import qualified Data.ByteString.Char8 as S
@@ -26,6 +25,7 @@ import Data.List.Split
 import Data.IterIO
 import Data.IterIO.Http
 import Data.IterIO.HttpRoute
+import Data.Maybe
 
 -- | A request parameter from a form field in the HTTP body
 data Param = Param {
@@ -34,10 +34,16 @@ data Param = Param {
   , paramHeaders :: [(S.ByteString, S.ByteString)] -- ^ Header of a @multipart/form-data@ post
 }
 
+data ActionState t m = ActionState {
+    actionReq  :: HttpReq t
+  , actionResp :: HttpResp m
+  , actionParams   :: ([Param], Maybe [Param])
+}
+
 -- | A 'StateT' monad in which requests can be handled. It keeps track of the
 -- 'HttpReq', the form parameters from the request body and an 'HttpResp' used
 -- to reply to the client.
-type Action t m a = StateT (HttpReq t, HttpResp m, [Param]) m a
+type Action t m a = StateT (ActionState t m) (Iter L.ByteString m) a
 
 -- | Routes an 'Action'
 routeAction :: Monad m => Action t m () -> HttpRoute m t
@@ -61,15 +67,15 @@ routeActionPattern pattern action = foldl' addVar (routeFn $ runActionWithRouteN
 
 -- |Sets a the value for \"_sess\" in the cookie to the given string.
 setSession :: Monad m => String -> Action t m ()
-setSession cookie = StateT $ \(req, resp, prm) ->
+setSession cookie = modify $ \s ->
   let cookieHeader = (S.pack "Set-Cookie", S.pack $ "_sess=" ++ cookie ++ "; path=/;")
-  in return $ ((), (req, respAddHeader cookieHeader resp , prm))
+  in s { actionResp = respAddHeader cookieHeader (actionResp s)}
 
 -- |Removes the \"_sess\" key-value pair from the cookie.
 destroySession :: Monad m => Action t m ()
-destroySession = StateT $ \(req, resp, prm) ->
+destroySession = modify $ \s ->
   let cookieHeader = (S.pack "Set-Cookie", S.pack "_sess=; path=/; expires=Thu, Jan 01 1970 00:00:00 UTC;")
-  in return $ ((), (req, respAddHeader cookieHeader resp, prm))
+  in s { actionResp = respAddHeader cookieHeader (actionResp s)}
 
 -- |Returns the value of an Http Header from the request if it exists otherwise
 -- 'Nothing'
@@ -80,11 +86,29 @@ requestHeader name = do
 
 -- |Returns the 'HttpReq' for the current request.
 getHttpReq :: Monad m => Action t m (HttpReq t)
-getHttpReq = StateT $ \(req, resp, prm) -> return $ (req, (req, resp, prm))
+getHttpReq = gets actionReq
+
+urlencoded :: S.ByteString
+urlencoded = S.pack "application/x-www-form-urlencoded"
+
+multipart :: S.ByteString
+multipart = S.pack "multipart/form-data"
 
 -- | Returns a list of all 'Param's.
 params :: Monad m => Action t m ([Param])
-params = StateT $ \s@(_, _, prm) -> return (prm, s)
+params = do
+  s <- get
+  let req = actionReq s
+  let (prms, mprms) = actionParams s
+  case mprms of
+    Just formPrms -> return $ prms ++ formPrms
+    Nothing -> do
+      formPrms <- lift $ case reqContentType req of
+        Just (mt, _) | mt /= urlencoded  && mt /= multipart ->
+          return []
+        _ -> paramList req
+      put $ s { actionParams = (prms, Just formPrms) }
+      return $ prms ++ formPrms
 
 -- | Returns the 'Param' corresponding to the specified key or 'Nothing'
 -- if one is not present in the request.
@@ -95,6 +119,16 @@ param key = do
   where go Nothing p = if paramKey p == key then Just p else Nothing
         go a _ = a
 
+-- | Force get parameter value
+paramVal :: Monad m => S.ByteString -> Action t m (L.ByteString)
+paramVal n = (paramValue . fromJust) `liftM` param n
+
+-- | Get (maybe) paramater value and transform it with @f@
+paramValM :: Monad m
+          => (L.ByteString -> a)
+          -> S.ByteString
+          -> Action t m (Maybe a)
+paramValM f n = fmap (f . paramValue) `liftM` param n
 
 runAction :: Monad m
               => Action s m ()
@@ -110,8 +144,9 @@ runActionWithRouteNames :: Monad m
 runActionWithRouteNames routeNames action req = do
   prms <- paramList req
   let pathLstParams = pathLstToParams req routeNames
-  (_, (_, response, _)) <- lift $ (runStateT action) (req, mkHttpHead stat200, pathLstParams ++ prms)
-  return $ response
+  let s = ActionState req (mkHttpHead stat200) (pathLstParams ++ prms, Nothing)
+  (_, result) <- (runStateT action) s
+  return $ actionResp result
 
 
 pathLstToParams :: HttpReq s -> [String] -> [Param]
