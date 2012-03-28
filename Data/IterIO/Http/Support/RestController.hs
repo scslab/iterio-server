@@ -19,7 +19,7 @@ import Data.Monoid
 
 -- |The class @RestController@ allows a set of actions to be routed using
 -- RESTful HTTP verbs.
-class Monad m => RestController m a where
+class Monad m => RestController t m a where
   -- |GET \/
   restIndex :: a -> Action t m ()
   restIndex _ = respond404
@@ -93,7 +93,7 @@ runWithVar varName controller = do
 --
 --    * PUT \/posts\/:id => myRestController#restUpdate
 --
-routeRestController :: RestController m a => String -> a -> HttpRoute m t
+routeRestController :: RestController t m a => String -> a -> HttpRoute m t
 routeRestController prefix controller = routeName prefix $ mconcat [
     routeTop $ routeMethod "GET" $ routeAction $ restIndex controller
   , routeTop $ routeMethod "POST" $ routeAction $ restCreate controller

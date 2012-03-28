@@ -32,7 +32,7 @@ data Param = Param {
     paramKey :: S.ByteString
   , paramValue :: L.ByteString
   , paramHeaders :: [(S.ByteString, S.ByteString)] -- ^ Header of a @multipart/form-data@ post
-}
+} deriving (Show)
 
 data ActionState t m = ActionState {
     actionReq  :: HttpReq t
@@ -142,9 +142,8 @@ runActionWithRouteNames :: Monad m
               -> HttpReq s
               -> Iter L.ByteString m (HttpResp m)
 runActionWithRouteNames routeNames action req = do
-  prms <- paramList req
   let pathLstParams = pathLstToParams req routeNames
-  let s = ActionState req (mkHttpHead stat200) (pathLstParams ++ prms, Nothing)
+  let s = ActionState req (mkHttpHead stat200) (pathLstParams, Nothing)
   (_, result) <- (runStateT action) s
   return $ actionResp result
 
