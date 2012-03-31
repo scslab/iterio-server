@@ -18,13 +18,13 @@ import Data.IterIO.Http.Support.Action (Action, ActionState(..))
 import Data.IterIO.Http
 
 -- | Responds to the client with an empty @404@ (Not Found) response.
-respond404 :: Monad m => Action t m ()
+respond404 :: Monad m => Action t b m ()
 respond404 = modify $
   \s -> s { actionResp = resp404 $ actionReq s }
 
 -- | Replaces the HTTP status in the current 'HttpResp' with the given
 -- 'HttpStatus'.
-respondStat :: Monad m => HttpStatus -> Action t m ()
+respondStat :: Monad m => HttpStatus -> Action t b m ()
 respondStat status = modify $
   \s -> s { actionResp = (actionResp s) { respStatus = status} }
 
@@ -32,7 +32,7 @@ respondStat status = modify $
 -- path.
 redirectTo :: Monad m
            => String -- ^ The path to redirect to
-           -> Action t m ()
+           -> Action t b m ()
 redirectTo path = modify $
   \s -> s { actionResp = resp303 path }
 
@@ -41,7 +41,7 @@ redirectTo path = modify $
 render :: Monad m
        => String -- ^ The mime-type of the response (commonly \"text\/html\")
        -> L.ByteString -- ^ The response body
-       -> Action t m ()
+       -> Action t b m ()
 render ctype text = modify $ \s -> s { actionResp = mkResp $ actionResp s }
   where len = (S.pack "Content-Length", S.pack . show . L.length $ text)
         ctypeHeader = (S.pack "Content-Type", S.pack ctype)
