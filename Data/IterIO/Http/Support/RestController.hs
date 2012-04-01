@@ -97,11 +97,11 @@ routeRestController :: RestController t b m a => String -> a -> ActionRoute b m 
 routeRestController prefix controller = routeName prefix $ mconcat [
     routeTop $ routeMethod "GET" $ routeAction $ restIndex controller
   , routeTop $ routeMethod "POST" $ routeAction $ restCreate controller
-  , routeMethod "GET" $ routeActionPattern "/new" $ restNew controller
-  , routeMethod "GET" $ routeActionPattern "/:id/edit" $ runWithVar "id" $ restEdit controller
-  , routeMethod "GET" $ routeActionPattern "/:id" $ runWithVar "id" $ restShow controller
-  , routeMethod "DELETE" $ routeActionPattern "/:id" $ runWithVar "id" $ restDestroy controller
-  , routeMethod "PUT" $ routeActionPattern "/:id" $ runWithVar "id" $ restUpdate controller
-  , routeMethod "POST" $ routeActionPattern "/:id" $ runWithVar "id" $ restUpdate controller
+  , routeMethod "GET" $ routePattern "/new" $ routeAction $ restNew controller
+  , routeMethod "GET" $ routePattern "/:id/edit" $ routeAction $ runWithVar "id" $ restEdit controller
+  , routeMethod "GET" $ routePattern "/:id" $ routeAction $ runWithVar "id" $ restShow controller
+  , routeMethod "DELETE" $ routePattern "/:id" $ routeAction $ runWithVar "id" $ restDestroy controller
+  , routeMethod "PUT" $ routePattern "/:id" $ routeAction $ runWithVar "id" $ restUpdate controller
+  , routeMethod "POST" $ routePattern "/:id" $ routeAction $ runWithVar "id" $ restUpdate controller
   ]
 

@@ -6,8 +6,8 @@
 -- |Utility functions for routing.
 module Data.IterIO.Http.Support.Routing (
     ActionRoute(..)
-  , runAction, runActionRoute, runIterAction
-  , routeAction, routeActionPattern
+  , runActionRoute, runIterAction
+  , routeAction, routePattern
   , routeConst, routeName, routeVar
   , routeTop, routeMethod, routeFileSys
     ) where
@@ -125,21 +125,24 @@ routeAction action = ActionRoute $ const . return . Just $ action
 --
 --  * \/:date\/posts\/:category\/new
 --
-routeActionPattern :: Monad m => String -> Action t b m () -> ActionRoute b m t
-routeActionPattern pattern action = foldl' addVar (routeActionWithRouteNames patternList action) patternList
+routePattern :: Monad m => String -> ActionRoute b m t -> ActionRoute b m t
+routePattern pattern action = foldl' addVar (routeActionWithRouteNames patternList action) patternList
   where patternList = reverse $ filter ((/= 0) . length) $ splitOn "/" pattern
         addVar rt (':':_) = routeVar rt
         addVar rt name = routeName name rt
 
 routeActionWithRouteNames :: Monad m
           => [String]
-          -> Action s b m ()
           -> ActionRoute b m s
-routeActionWithRouteNames routeNames act = ActionRoute $ \req ->
-  return . Just $ do
-    prms <- params
-    _ <- setParams (prms ++ pathLstToParams req routeNames)
-    act
+          -> ActionRoute b m s
+routeActionWithRouteNames routeNames (ActionRoute route) = ActionRoute $ \req -> do
+  mact <- route req
+  case mact of
+    Just act -> return . Just $ do
+      prms <- params
+      _ <- setParams (prms ++ pathLstToParams req routeNames)
+      act
+    Nothing -> return Nothing
 
 runAction :: Monad m
           => Action s b m a
