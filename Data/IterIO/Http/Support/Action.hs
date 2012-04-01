@@ -9,6 +9,8 @@ module Data.IterIO.Http.Support.Action (
   , ActionState(..)
   , Param(..)
   , params, param, paramVal, paramValM
+  , setParams
+  , getBody
   , getHttpReq
   , setSession, destroySession
   , requestHeader
@@ -63,8 +65,18 @@ requestHeader name = do
 getHttpReq :: Monad m => Action t b m (HttpReq t)
 getHttpReq = gets actionReq
 
+-- |Returns the body of the current request.
+getBody :: Monad m => Action t b m b
+getBody = gets actionBody
+
+-- | Set the list of 'Param's.
+setParams :: Monad m => [Param] -> Action t b m [Param]
+setParams prms = do
+  modify $ \s -> s { actionParams = prms }
+  return prms
+
 -- | Returns a list of all 'Param's.
-params :: Monad m => Action t b m ([Param])
+params :: Monad m => Action t b m [Param]
 params = do
   gets actionParams
 
