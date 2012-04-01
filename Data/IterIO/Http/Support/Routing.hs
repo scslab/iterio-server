@@ -6,7 +6,7 @@
 -- |Utility functions for routing.
 module Data.IterIO.Http.Support.Routing (
     ActionRoute(..)
-  , runActionRoute, runIterAction
+  , runActionRoute, runIterAction, runAction
   , routeAction, routePattern
   , routeConst, routeName, routeVar
   , routeTop, routeMethod, routeFileSys

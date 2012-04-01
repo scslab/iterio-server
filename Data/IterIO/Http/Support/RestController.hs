@@ -94,7 +94,7 @@ runWithVar varName controller = do
 --    * PUT \/posts\/:id => myRestController#restUpdate
 --
 routeRestController :: RestController t b m a => String -> a -> ActionRoute b m t
-routeRestController prefix controller = routeName prefix $ mconcat [
+routeRestController prefix controller = routePattern prefix $ mconcat [
     routeTop $ routeMethod "GET" $ routeAction $ restIndex controller
   , routeTop $ routeMethod "POST" $ routeAction $ restCreate controller
   , routeMethod "GET" $ routePattern "/new" $ routeAction $ restNew controller
