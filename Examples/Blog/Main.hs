@@ -33,7 +33,6 @@ instance RestController () L.ByteString IO PostsController where
     render "text/html" $ layout $ postsShow post
 
   restNew _ = do
-    return $ 1 + undefined
     render "text/html" $ layout postsNew
 
   restCreate _ = do

@@ -21,7 +21,7 @@ import Control.Monad.Trans.State
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import Data.IterIO.Http
-import Data.Maybe
+import Data.List (find)
 
 -- | A request parameter from a form field in the HTTP body
 data Param = Param {
@@ -83,15 +83,12 @@ params = do
 -- | Returns the 'Param' corresponding to the specified key or 'Nothing'
 -- if one is not present in the request.
 param :: Monad m => S.ByteString -> Action t b m (Maybe Param)
-param key = do
-  prms <- params
-  return $ foldl go Nothing prms
-  where go Nothing p = if paramKey p == key then Just p else Nothing
-        go a _ = a
+param key = find ((== key) . paramKey) `liftM` params
 
 -- | Force get parameter value
 paramVal :: Monad m => S.ByteString -> Action t b m (L.ByteString)
-paramVal n = (paramValue . fromJust) `liftM` param n
+paramVal n = param n >>=
+  maybe (fail "No such parameter") (return . paramValue)
 
 -- | Get (maybe) paramater value and transform it with @f@
 paramValM :: Monad m
