@@ -8,7 +8,7 @@ module Data.IterIO.Http.Support.Routing (
     ActionRoute(..)
   , runActionRoute, runIterAction, runAction
   , routeAction, routePattern
-  , routeConst, routeName, routeVar
+  , routeName, routeVar
   , routeTop, routeMethod, routeFileSys
     ) where
 
@@ -100,11 +100,6 @@ instance Monad m => Monoid (ActionRoute b m s) where
       case f of
         Just _ -> return f
         Nothing -> b req
-
--- | Routes all requests to a constant 'Action'. This route always
--- succeeds.
-routeConst :: Monad m => Action s b m () -> ActionRoute b m s
-routeConst act = ActionRoute $ const . return . Just $ act 
 
 popPath :: Bool -> HttpReq s -> HttpReq s
 popPath isParm req =
