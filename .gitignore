@@ -3,5 +3,6 @@
 *_hsc.[ch]
 *~
 *.sw?
+*.sqlite3
 /Setup
 /dist

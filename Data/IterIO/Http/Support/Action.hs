@@ -6,124 +6,95 @@
 -- HTTP requests with IterIO.
 module Data.IterIO.Http.Support.Action (
     Action
+  , ActionState(..)
   , Param(..)
-  , routeAction
-  , routeActionPattern
-  , params
-  , param
+  , params, param, paramVal, paramValM
+  , setParams
+  , getBody
   , getHttpReq
-  , setSession
-  , destroySession
+  , setSession, destroySession
   , requestHeader
 ) where
 
-import Control.Monad.Trans
+import Control.Monad
 import Control.Monad.Trans.State
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
-import Data.List
-import Data.List.Split
-import Data.IterIO
 import Data.IterIO.Http
-import Data.IterIO.HttpRoute
+import Data.List (find)
 
 -- | A request parameter from a form field in the HTTP body
 data Param = Param {
     paramKey :: S.ByteString
   , paramValue :: L.ByteString
   , paramHeaders :: [(S.ByteString, S.ByteString)] -- ^ Header of a @multipart/form-data@ post
+} deriving (Show)
+
+data ActionState t b m = ActionState {
+    actionReq  :: HttpReq t
+  , actionResp :: HttpResp m
+  , actionParams   :: [Param]
+  , actionBody :: b
 }
 
 -- | A 'StateT' monad in which requests can be handled. It keeps track of the
 -- 'HttpReq', the form parameters from the request body and an 'HttpResp' used
 -- to reply to the client.
-type Action t m a = StateT (HttpReq t, HttpResp m, [Param]) m a
-
--- | Routes an 'Action'
-routeAction :: Monad m => Action t m () -> HttpRoute m t
-routeAction action = routeFn $ runAction action
-
--- | Routes an 'Action' to the given URL pattern. Patterns can include
--- directories as well as variable patterns (prefixed with @:@) to be passed
--- into the 'Action' as extra 'Param's. Some examples of URL patters:
---
---  * \/posts\/:id
---
---  * \/posts\/:id\/new
---
---  * \/:date\/posts\/:category\/new
---
-routeActionPattern :: Monad m => String -> Action t m () -> HttpRoute m t
-routeActionPattern pattern action = foldl' addVar (routeFn $ runActionWithRouteNames patternList action) patternList
-  where patternList = reverse $ filter ((/= 0) . length) $ splitOn "/" pattern
-        addVar rt (':':_) = routeVar rt
-        addVar rt name = routeName name rt
+type Action t b m a = StateT (ActionState t b m) m a
 
 -- |Sets a the value for \"_sess\" in the cookie to the given string.
-setSession :: Monad m => String -> Action t m ()
-setSession cookie = StateT $ \(req, resp, prm) ->
+setSession :: Monad m => String -> Action t b m ()
+setSession cookie = modify $ \s ->
   let cookieHeader = (S.pack "Set-Cookie", S.pack $ "_sess=" ++ cookie ++ "; path=/;")
-  in return $ ((), (req, respAddHeader cookieHeader resp , prm))
+  in s { actionResp = respAddHeader cookieHeader (actionResp s)}
 
 -- |Removes the \"_sess\" key-value pair from the cookie.
-destroySession :: Monad m => Action t m ()
-destroySession = StateT $ \(req, resp, prm) ->
+destroySession :: Monad m => Action t b m ()
+destroySession = modify $ \s ->
   let cookieHeader = (S.pack "Set-Cookie", S.pack "_sess=; path=/; expires=Thu, Jan 01 1970 00:00:00 UTC;")
-  in return $ ((), (req, respAddHeader cookieHeader resp, prm))
+  in s { actionResp = respAddHeader cookieHeader (actionResp s)}
 
 -- |Returns the value of an Http Header from the request if it exists otherwise
 -- 'Nothing'
-requestHeader :: Monad m => S.ByteString -> Action t m (Maybe S.ByteString)
+requestHeader :: Monad m => S.ByteString -> Action t b m (Maybe S.ByteString)
 requestHeader name = do
   httpReq <- getHttpReq
   return $ lookup name (reqHeaders httpReq)
 
 -- |Returns the 'HttpReq' for the current request.
-getHttpReq :: Monad m => Action t m (HttpReq t)
-getHttpReq = StateT $ \(req, resp, prm) -> return $ (req, (req, resp, prm))
+getHttpReq :: Monad m => Action t b m (HttpReq t)
+getHttpReq = gets actionReq
+
+-- |Returns the body of the current request.
+getBody :: Monad m => Action t b m b
+getBody = gets actionBody
+
+-- | Set the list of 'Param's.
+setParams :: Monad m => [Param] -> Action t b m [Param]
+setParams prms = do
+  modify $ \s -> s { actionParams = prms }
+  return prms
 
 -- | Returns a list of all 'Param's.
-params :: Monad m => Action t m ([Param])
-params = StateT $ \s@(_, _, prm) -> return (prm, s)
+params :: Monad m => Action t b m [Param]
+params = do
+  gets actionParams
 
 -- | Returns the 'Param' corresponding to the specified key or 'Nothing'
 -- if one is not present in the request.
-param :: Monad m => S.ByteString -> Action t m (Maybe Param)
-param key = do
-  prms <- params
-  return $ foldl go Nothing prms
-  where go Nothing p = if paramKey p == key then Just p else Nothing
-        go a _ = a
+param :: Monad m => S.ByteString -> Action t b m (Maybe Param)
+param key = find ((== key) . paramKey) `liftM` params
 
+-- | Force get parameter value
+paramVal :: Monad m => S.ByteString -> Action t b m (L.ByteString)
+paramVal n = param n >>=
+  maybe (fail "No such parameter") (return . paramValue)
 
-runAction :: Monad m
-              => Action s m ()
-              -> HttpReq s
-              -> Iter L.ByteString m (HttpResp m)
-runAction = runActionWithRouteNames []
+-- | Get (maybe) paramater value and transform it with @f@
+paramValM :: Monad m
+          => (L.ByteString -> a)
+          -> S.ByteString
+          -> Action t b m (Maybe a)
+paramValM f n = fmap (f . paramValue) `liftM` param n
 
-runActionWithRouteNames :: Monad m
-              => [String]
-              -> Action s m ()
-              -> HttpReq s
-              -> Iter L.ByteString m (HttpResp m)
-runActionWithRouteNames routeNames action req = do
-  prms <- paramList req
-  let pathLstParams = pathLstToParams req routeNames
-  (_, (_, response, _)) <- lift $ (runStateT action) (req, mkHttpHead stat200, pathLstParams ++ prms)
-  return $ response
-
-
-pathLstToParams :: HttpReq s -> [String] -> [Param]
-pathLstToParams req routeNames = result
-  where (result, _) = foldl go ([], reqPathParams req) routeNames
-        go (prms, plst) (':':var) = ((transform var $ head plst):prms, tail plst)
-        go s _ = s
-        transform k v = Param (S.pack k) (L.fromChunks [v]) []
-
-paramList :: Monad m => HttpReq s -> Iter L.ByteString m [Param]
-paramList req = foldForm req handle []
-  where handle accm field = do
-          val <- pureI
-          return $ (Param (ffName field) val (ffHeaders field)):accm
 
