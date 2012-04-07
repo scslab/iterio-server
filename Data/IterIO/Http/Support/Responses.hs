@@ -6,6 +6,7 @@
 module Data.IterIO.Http.Support.Responses (
     render
   , redirectTo
+  , redirectBack
   , respond404
   , respondStat
 ) where
@@ -14,7 +15,7 @@ import Control.Monad.Trans.State
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import Data.IterIO
-import Data.IterIO.Http.Support.Action (Action, ActionState(..))
+import Data.IterIO.Http.Support.Action (Action, ActionState(..), requestHeader)
 import Data.IterIO.Http
 
 -- | Responds to the client with an empty @404@ (Not Found) response.
@@ -35,6 +36,13 @@ redirectTo :: Monad m
            -> Action t b m ()
 redirectTo path = modify $
   \s -> s { actionResp = resp303 path }
+
+-- | Redirect \"back\" according to the \"referer\" header.
+redirectBack :: Monad m => Action t b m ()
+redirectBack = do
+  mhdr <- requestHeader (S.pack "referer")
+  maybe (fail "Referer header not set") (redirectTo . S.unpack) mhdr
+  
 
 -- | Responds to the client with a @200@ (Success) response with the given body
 -- and mime-type.
