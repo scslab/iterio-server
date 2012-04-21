@@ -3,18 +3,21 @@ module Data.IterIO.Server.TCPServer (
   TCPServer(..),
   runTCPServer,
   defaultServerAcceptor,
+  secureServerAcceptor,
   minimalTCPServer,
   simpleHttpServer,
-  echoServer
+  simpleHttpsServer
 ) where
 
 import Control.Concurrent.MonadIO
 import Control.Monad
 import qualified Data.ByteString.Lazy as L
 import qualified Network.Socket as Net
+import qualified OpenSSL.Session as SSL
 import System.IO
 import Data.IterIO
 import Data.IterIO.Http
+import Data.IterIO.SSL
 import Data.ListLike.IO
 
 -- |Sets up a TCP socket to listen on the given port.
@@ -69,6 +72,13 @@ defaultServerAcceptor sock = liftIO $ do
   hSetBuffering h NoBuffering
   return (handleI h, enumHandle h)
 
+-- |This acceptor creates an 'Iter' and 'Onum' using 'iterSSL'.
+secureServerAcceptor ::  MonadIO m
+                     => SSL.SSLContext
+                     -> Net.Socket
+                     -> m (Iter L.ByteString m (), Onum L.ByteString m a)
+secureServerAcceptor ctx sock = liftIO $ iterSSL ctx sock True
+
 -- |Runs a 'TCPServer' in a loop.
 runTCPServer :: (ListLikeIO inp e,
                  ChunkData inp, Monad m)
@@ -91,12 +101,13 @@ simpleHttpServer :: Net.PortNumber
 simpleHttpServer port reqHandler = minimalTCPServer { serverPort = port, serverHandler = httpAppHandler }
   where httpAppHandler = inumHttpServer $ ioHttpServer reqHandler
 
--- |Creates a 'TCPServer' that echoes each line from the client until EOF.
-echoServer :: Net.PortNumber -> TCPServer String IO
-echoServer port = minimalTCPServer { serverPort = port, serverHandler = echoAppHandler }
-  where echoAppHandler = mkInumM $ forever $ do
-          input <- safeLineI
-          case input of
-            Just output -> irun $ enumPure $ output ++ "\r\n"
-            Nothing -> irun $ enumPure []
-
+-- |Creates a simple HTTPS server from an 'HTTPRequestHandler'.
+simpleHttpsServer :: SSL.SSLContext
+                  -> Net.PortNumber
+                  -> HttpRequestHandler IO ()
+                  -> TCPServer L.ByteString IO
+simpleHttpsServer ctx port reqHandler =
+  TCPServer { serverPort          = port
+            , serverHandler       = inumHttpServer $ ioHttpServer reqHandler
+            , serverAcceptor      = secureServerAcceptor ctx
+            , serverResultHandler = id }
